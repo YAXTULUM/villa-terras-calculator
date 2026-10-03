@@ -1,0 +1,36 @@
+name: Hourly waterfall model
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'calculators/waterfall/**'
+      - '.github/workflows/hourly-waterfall.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  waterfall:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install workbook dependency
+        run: python -m pip install 'openpyxl>=3.1,<4'
+      - name: Run waterfall tests
+        run: python -m unittest discover -s calculators/waterfall -p 'test_*.py' -v
+      - name: Generate example investor workbook
+        run: python calculators/waterfall/waterfall.py --input calculators/waterfall/example_deal.json --output-dir output
+      - name: Upload calculated reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: waterfall-results-${{ github.run_number }}
+          path: |
+            output/waterfall_results.xlsx
+            output/waterfall_results.json
+          retention-days: 30

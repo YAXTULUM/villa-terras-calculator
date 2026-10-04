@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -28,17 +29,19 @@ class Terms:
         rates = ("preferred_rate", "tier3_irr", "tier4_irr")
         shares = ("catchup_share", "tier3_lp_share", "tier4_lp_share", "residual_lp_share")
         for name in rates:
-            if getattr(self, name) < 0:
-                raise ValueError(f"Invalid {name}: {getattr(self, name)}")
+            value = getattr(self, name)
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f"Invalid {name}: {value}")
         for name in shares:
             value = getattr(self, name)
-            if not 0 <= value < 1:
+            if not math.isfinite(value) or not 0 <= value < 1:
                 raise ValueError(f"Invalid {name}: {value}")
         if not self.tier3_lp_share or not self.tier4_lp_share:
             raise ValueError("Hurdle tier LP shares must be positive")
         if self.tier3_irr > self.tier4_irr or self.tier3_multiple > self.tier4_multiple:
             raise ValueError("Hurdles must increase across tiers")
-        if self.tier3_multiple < 1 or self.tier4_multiple < 1:
+        if (not math.isfinite(self.tier3_multiple) or not math.isfinite(self.tier4_multiple)
+                or self.tier3_multiple < 1 or self.tier4_multiple < 1):
             raise ValueError("Equity multiples must be at least 1.0")
 
 
@@ -81,8 +84,8 @@ def calculate(periods: list[dict], terms: Terms = Terms()) -> dict:
     for p in rows:
         day = date.fromisoformat(p["date"])
         lp_in, gp_in, cash = (float(p.get(k, 0)) for k in ("lp_contribution", "gp_contribution", "cash"))
-        if min(lp_in, gp_in, cash) < 0:
-            raise ValueError("Contributions and distributable cash cannot be negative")
+        if any(not math.isfinite(value) or value < 0 for value in (lp_in, gp_in, cash)):
+            raise ValueError("Contributions and distributable cash must be finite and nonnegative")
         elapsed = (day - last_date).days if last_date else 0
         if last_date:
             preferred_unpaid += capital_lp * terms.preferred_rate * elapsed / 365

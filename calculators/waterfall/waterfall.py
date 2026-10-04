@@ -27,15 +27,17 @@ class Terms:
 
     def validate(self):
         rates = ("preferred_rate", "tier3_irr", "tier4_irr")
-        shares = ("catchup_share", "tier3_lp_share", "tier4_lp_share", "residual_lp_share")
+        shares = ("tier3_lp_share", "tier4_lp_share", "residual_lp_share")
         for name in rates:
             value = getattr(self, name)
             if not math.isfinite(value) or value < 0:
                 raise ValueError(f"Invalid {name}: {value}")
         for name in shares:
             value = getattr(self, name)
-            if not math.isfinite(value) or not 0 <= value < 1:
+            if not math.isfinite(value) or not 0 <= value <= 1:
                 raise ValueError(f"Invalid {name}: {value}")
+        if not math.isfinite(self.catchup_share) or not 0 <= self.catchup_share < 1:
+            raise ValueError(f"Invalid catchup_share: {self.catchup_share}")
         if not self.tier3_lp_share or not self.tier4_lp_share:
             raise ValueError("Hurdle tier LP shares must be positive")
         if self.tier3_irr > self.tier4_irr or self.tier3_multiple > self.tier4_multiple:

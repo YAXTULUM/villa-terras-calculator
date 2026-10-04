@@ -54,6 +54,25 @@ class WaterfallTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             calculate([{"date": "2026-01-01"}], Terms(tier3_multiple=float("nan")))
 
+    def test_full_lp_distribution_share(self):
+        rows = [{"date": "2026-01-01", "lp_contribution": 70, "gp_contribution": 30},
+                {"date": "2027-01-01", "cash": 200}]
+        terms = Terms(catchup_enabled=False, tier3_lp_share=1.0,
+                      tier4_lp_share=1.0, residual_lp_share=1.0)
+        result = calculate(rows, terms)
+        summary = result["summary"]
+        self.assertAlmostEqual(summary["lp_distributions"], 170)
+        self.assertAlmostEqual(summary["gp_distributions"], 30)
+        self.assertAlmostEqual(summary["cash_difference"], 0)
+        final = result["periods"][-1]
+        self.assertAlmostEqual(final["gp_tier3"], 0)
+        self.assertAlmostEqual(final["gp_tier4"], 0)
+        self.assertAlmostEqual(final["gp_residual"], 0)
+
+    def test_full_catchup_share_rejected(self):
+        with self.assertRaises(ValueError):
+            calculate([{"date": "2026-01-01"}], Terms(catchup_share=1.0))
+
 
 if __name__ == "__main__":
     unittest.main()

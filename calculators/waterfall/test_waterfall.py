@@ -46,6 +46,14 @@ class WaterfallTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             calculate([{"date": "2026-01-01"}], Terms(tier3_lp_share=0))
 
+    def test_nonfinite_inputs_rejected(self):
+        with self.assertRaises(ValueError):
+            calculate([{"date": "2026-01-01", "lp_contribution": 100, "cash": float("nan")}])
+        with self.assertRaises(ValueError):
+            calculate([{"date": "2026-01-01", "lp_contribution": float("inf")}])
+        with self.assertRaises(ValueError):
+            calculate([{"date": "2026-01-01"}], Terms(tier3_multiple=float("nan")))
+
 
 if __name__ == "__main__":
     unittest.main()
